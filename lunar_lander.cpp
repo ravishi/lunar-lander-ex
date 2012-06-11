@@ -35,7 +35,8 @@ GLfloat shipAngle;
 OBJ *mapa;
 
 // Variáveis do observador
-GLfloat angle, fAspect;
+// Angulo de abertura da câmera e aspecto de visão
+GLfloat camOpeningAngle, fAspect;
 
 
 // Box2D
@@ -65,7 +66,7 @@ void AtualizaVisualizacao(void)
     glLoadIdentity();
 
     // Especifica a projeção perspectiva
-    gluPerspective(angle,fAspect,10,500);
+    gluPerspective(camOpeningAngle,fAspect,10,500);
 
     // Especifica sistema de coordenadas do modelo
     glMatrixMode(GL_MODELVIEW);
@@ -136,13 +137,13 @@ void GerenciaMouse(int button, int state, int x, int y)
 
     if (button == GLUT_LEFT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-in
-            if (angle >= 10)
-                angle -= 5;
+            if (camOpeningAngle >= 10)
+                camOpeningAngle -= 5;
         }
     if (button == GLUT_RIGHT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-out
-            if (angle <= 130)
-                angle += 5;
+            if (camOpeningAngle <= 130)
+                camOpeningAngle += 5;
         }
     AtualizaVisualizacao();
     glutPostRedisplay();
@@ -297,9 +298,6 @@ void InicializaLuz(void)
 
     // Habilita o depth-buffering
     glEnable(GL_DEPTH_TEST);
-
-    // !!! Descobrir para que serve !!!
-    angle=45;
 }
 
 void InicializaLoaders(void) {
@@ -316,6 +314,7 @@ void Inicializa(void)
 { 
     _nx = 20;
     _ny = 50;
+    camOpeningAngle=45;
     shipAngle = 0;
 
     InicializaLuz();
