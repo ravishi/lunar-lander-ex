@@ -17,6 +17,8 @@
  */
 // Includes
 #include "bibutil.h"
+#include <Box2D/Box2D.h>
+#include <vector>
 
 // Variáveis da janela
 GLint _x = 800;
@@ -27,11 +29,25 @@ OBJ *apollo11;
 GLfloat _nx;
 GLfloat _ny;
 
+GLfloat shipAngle;
+
 //Variáveis do mapa
 OBJ *mapa;
 
 // Variáveis do observador
 GLfloat angle, fAspect;
+
+
+// Box2D
+b2Vec2 gravity(0.0f, -10.f);
+b2World world(gravity);
+
+b2Body *groundBody;
+b2Body *shipBody;
+
+float32 worldTimeStep = 1.0f / 60.0f;
+int32 worldVelocityIterations = 6;
+int32 worldPositionIterations = 2;
 
 
 
@@ -90,16 +106,24 @@ void TeclasEspeciais(int key, int x, int y)
 {
     switch (key) {
         case GLUT_KEY_UP:
-            _ny+=1;
+        {
+            b2Vec2 point;
+            b2Vec2 force;
+
+            point.Set(_nx, _ny);
+            force.Set(0, 10.0f);
+
+            shipBody->ApplyForce(force, point);
             break; 
+        }
         case GLUT_KEY_DOWN:
             _ny-=1;
             break; 
         case GLUT_KEY_LEFT:
-            _nx-=1;
+            //shipAngle -= 10;
             break; 
         case GLUT_KEY_RIGHT:
-            _nx+=1;
+            //shipAngle += 10;
             break; 
     }
     AtualizaVisualizacao();
@@ -128,6 +152,64 @@ void GerenciaMouse(int button, int state, int x, int y)
  * |                                Física                               |
  * +---------------------------------------------------------------------+
  */
+
+void AtualizarMundo(int value)
+{
+    world.Step(worldTimeStep,
+               worldVelocityIterations,
+               worldPositionIterations);
+    b2Vec2 position = shipBody->GetPosition();
+    float32 angle = shipBody->GetAngle();
+
+    // sincronizar a posição da nave
+    _ny = position.y;
+    shipAngle = angle;
+    glutPostRedisplay();
+
+    // registrar esse mesmo callback novamente
+    glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, value+1);
+}
+
+void InicializaFisica()
+{
+    // o chão
+    b2BodyDef groundBodyDef;
+    groundBodyDef.position.Set(0.0f, -10.0f);
+
+    groundBody = world.CreateBody(&groundBodyDef);
+
+    b2PolygonShape groundBox;
+    groundBox.SetAsBox(50.0f, 10.0f);
+    groundBody->CreateFixture(&groundBox, 0.0f);
+
+
+    // a nave
+    b2BodyDef shipBodyDef;
+    shipBodyDef.type = b2_dynamicBody;
+    shipBodyDef.position.Set(0.0f, _ny);
+    
+    shipBody = world.CreateBody(&shipBodyDef);
+
+    // um triângulo para representar a nave
+    b2Vec2 vertices[3];
+    vertices[0].Set(0.0, 5.128f);
+    vertices[1].Set(-3.345f, 0.0f);
+    vertices[2].Set(3.345f, 0.0f);;
+
+
+    b2PolygonShape shipShape;
+    shipShape.Set(vertices, 3);
+
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &shipShape;
+    fixtureDef.density = 40.0f;
+    fixtureDef.friction = 0.3f;
+
+    shipBody->CreateFixture(&fixtureDef);
+
+    // definir um timer para atualizar o mundo
+    glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, 0);
+}
 
 /* +---------------------------------------------------------------------+
  * |                          Funções de desenho                         |
@@ -158,8 +240,10 @@ void Desenha(void)
     DesenhaMapa();
 
     glTranslatef(_nx, _ny, 0);
+    glRotatef(shipAngle, 0, 0, 1);
 
-    DesenhaApollo11();
+    DesenhaApollo11();;
+
 
     AtualizaVisualizacao();
 
@@ -214,7 +298,6 @@ void InicializaLuz(void)
     // Habilita o depth-buffering
     glEnable(GL_DEPTH_TEST);
 
-
     // !!! Descobrir para que serve !!!
     angle=45;
 }
@@ -229,14 +312,17 @@ void InicializaLoaders(void) {
     SetaModoDesenho('s');	// 's' para sólido
 }
 
-void Inicializa(void) { 
+void Inicializa(void)
+{ 
     _nx = 20;
     _ny = 50;
+    shipAngle = 0;
 
     InicializaLuz();
 
     InicializaLoaders();
 
+    InicializaFisica();
 }
 
 /* +---------------------------------------------------------------------+
