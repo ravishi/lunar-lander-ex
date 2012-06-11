@@ -33,6 +33,7 @@ GLfloat shipAngle;
 
 //Variáveis do mapa
 OBJ *mapa;
+TEX *texFundo;
 
 // Variáveis do observador
 // Angulo de abertura da câmera e aspecto de visão
@@ -66,7 +67,7 @@ void AtualizaVisualizacao(void)
     glLoadIdentity();
 
     // Especifica a projeção perspectiva
-    gluPerspective(camOpeningAngle,fAspect,10,500);
+    gluPerspective(camOpeningAngle,fAspect,10, 500);
 
     // Especifica sistema de coordenadas do modelo
     glMatrixMode(GL_MODELVIEW);
@@ -74,7 +75,7 @@ void AtualizaVisualizacao(void)
     glLoadIdentity();
 
     // Especifica posição do observador e do alvo
-    gluLookAt(_nx, _ny+10, 60,   _nx, _ny, 0,   0, 1, 0);
+    gluLookAt(_nx, _ny+15, 60,   _nx, _ny, 0,   0, 1, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -98,6 +99,7 @@ void Teclado (unsigned char tecla, int x, int y)
     {
         // Libera memória e finaliza programa
         LiberaObjeto(apollo11);
+        LiberaMateriais();
         exit(0);
     }
 
@@ -219,14 +221,37 @@ void InicializaFisica()
 
 void DesenhaApollo11(void)
 {
-    DesenhaObjeto(apollo11);
-
+    glPushMatrix();
+        glTranslatef(_nx, _ny, 0);
+        glRotatef(shipAngle, 0, 0, 1);
+        DesenhaObjeto(apollo11);
+    glPopMatrix();
 }
 
 void DesenhaMapa(void)
 {
     DesenhaObjeto(mapa);
 
+}
+
+void DesenhaFundo(void)
+{
+    glPushMatrix();
+        glTranslatef(0, -60, -40);
+        glEnable(GL_TEXTURE_2D); 
+        glNormal3f(0,1,0);
+	    glBegin(GL_QUADS);		
+	        glTexCoord2f(0, 1); // canto superior esquerdo
+            glVertex3f(-125, 250, -15); // canto superior esquerdo
+            glTexCoord2f(0, 0); // canto inferior esquerdo
+            glVertex3f(-125, 0, 0); // canto inferior esquerdo
+            glTexCoord2f(1, 0); // canto inferior direito
+            glVertex3f(125, 0, 0); // canto inferior direito
+            glTexCoord2f(1, 1); // canto superior direito
+            glVertex3f(125, 250, -15); // canto superior direito	
+	    glEnd();
+        glDisable(GL_TEXTURE_2D);
+    glPopMatrix();
 }
 
 /* +---------------------------------------------------------------------+
@@ -240,11 +265,9 @@ void Desenha(void)
 
     DesenhaMapa();
 
-    glTranslatef(_nx, _ny, 0);
-    glRotatef(shipAngle, 0, 0, 1);
+    DesenhaFundo();    
 
-    DesenhaApollo11();;
-
+    DesenhaApollo11();
 
     AtualizaVisualizacao();
 
@@ -268,7 +291,7 @@ void InicializaLuz(void)
     GLint especMaterial = 60;
 
     // Especifica que a cor de fundo da janela será preta
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
     // Habilita o modelo de colorização de Gouraud
     glShadeModel(GL_FLAT);
@@ -306,14 +329,15 @@ void InicializaLoaders(void) {
 
     mapa = CarregaObjeto("mapas/level_1/level_1.obj", false);
 
+    texFundo = CarregaTextura("fundo/bg.jpg", false);
     // Seta o modo de desenho
-    SetaModoDesenho('s');	// 's' para sólido
+    SetaModoDesenho('t');	// 's' para sólido
 }
 
 void Inicializa(void)
 { 
-    _nx = 20;
-    _ny = 50;
+    _nx = 0;
+    _ny = 70;
     camOpeningAngle=45;
     shipAngle = 0;
 
