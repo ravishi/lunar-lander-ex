@@ -75,7 +75,7 @@ void AtualizaVisualizacao(void)
     glLoadIdentity();
 
     // Especifica posição do observador e do alvo
-    gluLookAt(_nx, _ny+15, 60,   _nx, _ny, 0,   0, 1, 0);
+    gluLookAt(_nx, 30, 80,   _nx, _ny, 0,   0, 1, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -237,18 +237,18 @@ void DesenhaMapa(void)
 void DesenhaFundo(void)
 {
     glPushMatrix();
-        glTranslatef(0, -60, -40);
+        glTranslatef(0, -80, -40);
         glEnable(GL_TEXTURE_2D); 
         glNormal3f(0,1,0);
 	    glBegin(GL_QUADS);		
 	        glTexCoord2f(0, 1); // canto superior esquerdo
-            glVertex3f(-125, 250, -15); // canto superior esquerdo
+            glVertex3f(-200, 400, 0); // canto superior esquerdo
             glTexCoord2f(0, 0); // canto inferior esquerdo
-            glVertex3f(-125, 0, 0); // canto inferior esquerdo
+            glVertex3f(-200, 0, 15); // canto inferior esquerdo
             glTexCoord2f(1, 0); // canto inferior direito
-            glVertex3f(125, 0, 0); // canto inferior direito
+            glVertex3f(200, 0, 15); // canto inferior direito
             glTexCoord2f(1, 1); // canto superior direito
-            glVertex3f(125, 250, -15); // canto superior direito	
+            glVertex3f(200, 400, 0); // canto superior direito	
 	    glEnd();
         glDisable(GL_TEXTURE_2D);
     glPopMatrix();
@@ -331,13 +331,13 @@ void InicializaLoaders(void) {
 
     texFundo = CarregaTextura("fundo/bg.jpg", false);
     // Seta o modo de desenho
-    SetaModoDesenho('t');	// 's' para sólido
+    SetaModoDesenho('s');	// 's' para sólido
 }
 
 void Inicializa(void)
 { 
     _nx = 0;
-    _ny = 70;
+    _ny = 80;
     camOpeningAngle=45;
     shipAngle = 0;
 
