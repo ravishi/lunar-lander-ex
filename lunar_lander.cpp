@@ -57,6 +57,68 @@ int32 worldPositionIterations = 2;
 std::map<GLint, GLfloat> pressedKeys;
 
 
+class Motor {
+    public:
+        Motor(GLfloat potencia_max, GLfloat tempo_inic)
+        {
+            _potencia_max = potencia_max;
+            _potencia_atual = 0;
+            _ligado = false;
+            _tempo_inic = tempo_inic;
+        }
+
+        bool ligado() {
+            return _ligado;
+        }
+
+        bool desligar() {
+            if (!ligado()) {
+                return false;
+            }
+            _ligado = false;
+        }
+
+        bool ligar() {
+            if (ligado()) {
+                return false;
+            }
+            _ligado = true;
+            _potencia_atual = 0;
+        }
+
+        GLfloat potencia() {
+            return _potencia_atual;
+        }
+
+        void atualizar(GLfloat step) {
+            // step é o tempo decorrido desde a ultima atualização
+            if (ligado() && _potencia_atual < _potencia_max) {
+                _potencia_atual += (_potencia_max / _tempo_inic) * step;
+                if (_potencia_atual > _potencia_max) {
+                    _potencia_atual = _potencia_max;
+                }
+            }
+            else if (!ligado() && _potencia_atual > 0) {
+                _potencia_atual -= (_potencia_max / _tempo_inic) * step;
+                if (_potencia_atual < 0) {
+                    _potencia_atual = 0;
+                }
+            }
+            //printf("%.5f %.5f\n", step, _potencia_atual);
+        }
+
+    private:
+        GLfloat _potencia_max;
+        GLfloat _potencia_atual;
+        GLfloat _tempo_inic;
+        bool _ligado;
+};
+
+Motor motorPrincipal(500, 1000);
+Motor motorLatEsq(400, 1000);
+Motor motorLatDir(400, 1000);
+
+
 
 /* +---------------------------------------------------------------------+
  * |                        Funções de uso geral                         |
@@ -114,15 +176,23 @@ void TeclasEspeciais(int key, int x, int y)
 {
     switch (key) {
         case GLUT_KEY_UP:
-        case GLUT_KEY_DOWN:
+            motorPrincipal.ligar();
+            break;
         case GLUT_KEY_LEFT:
+            motorLatEsq.ligar();
+            break;
         case GLUT_KEY_RIGHT:
+            motorLatDir.ligar();
+            break;
+            /*
+        case GLUT_KEY_DOWN:
         {
             if (pressedKeys.count(key) <= 0) {
                 pressedKeys[key] = 0;
             }
             break; 
         }
+        */
     }
 }
 
@@ -130,6 +200,15 @@ void SpecialKeyUp(int key, int x, int y)
 {
     switch (key) {
         case GLUT_KEY_UP:
+            motorPrincipal.desligar();
+            break;
+        case GLUT_KEY_LEFT:
+            motorLatEsq.desligar();
+            break;
+        case GLUT_KEY_RIGHT:
+            motorLatDir.desligar();
+            break;
+            /*
         case GLUT_KEY_DOWN:
         case GLUT_KEY_LEFT:
         case GLUT_KEY_RIGHT:
@@ -137,6 +216,7 @@ void SpecialKeyUp(int key, int x, int y)
             pressedKeys.erase(key);
             break; 
         }
+        */
     }
 }
 
@@ -170,13 +250,7 @@ void Escreva(char *string){//Write string on the screen
 
 void AtualizarMundo(int value)
 {
-
-    // incrementar todas as teclas pressionadas
-    std::map<GLint, GLfloat>::iterator it;
-    for (it = pressedKeys.begin(); it != pressedKeys.end(); it++)
-    {
-        (*it).second += worldTimeStep;
-    }
+    GLfloat worldStep = worldTimeStep * 1000;
 
     b2Vec2 point;
     point.Set(_nx, _ny);
@@ -184,56 +258,35 @@ void AtualizarMundo(int value)
     b2Vec2 force;
     force.Set(0, 0);
 
-    it = pressedKeys.find(GLUT_KEY_UP);
-    if (it != pressedKeys.end()) {
-        GLfloat factor = (*it).second;
-        if (factor > 1) {
-            factor = 1;
-        }
+    // atualizar o motor principal
+    motorPrincipal.atualizar(worldStep);
+    motorLatEsq.atualizar(worldStep);
+    motorLatDir.atualizar(worldStep);
 
-        force.Set(force.x, 400.0f * factor);
-        //shipBody->ApplyForce(force, point);
-    }
-
-    GLfloat lmfactor = 0;
-    it = pressedKeys.find(GLUT_KEY_RIGHT);
-    if (it != pressedKeys.end()) {
-        lmfactor = (*it).second;
-        if (lmfactor > 1) {
-            lmfactor = 1;
-        }
-    }
-    else if ((it = pressedKeys.find(GLUT_KEY_LEFT)) != pressedKeys.end()) {
-        lmfactor = - (*it).second;
-        if (lmfactor < 1) {
-            lmfactor = 1;
-        }
-    }
-
-    if (lmfactor != 0) {
-        force.Set(100.0f * lmfactor, force.y);
-    }
+    force.Set(
+            motorLatDir.potencia() - motorLatEsq.potencia(),
+            motorPrincipal.potencia()
+        );
 
     if (force.x != 0 || force.y != 0)
         shipBody->ApplyForce(force, point);
-
 
     world.Step(worldTimeStep,
                worldVelocityIterations,
                worldPositionIterations);
 
     b2Vec2 position = shipBody->GetPosition();
-    float32 angle = shipBody->GetAngle();
 
     // sincronizar a posição da nave
     _ny = position.y;
-    shipAngle = angle;
+    _nx = position.x;
+    shipAngle = shipBody->GetAngle();
 
-    if (value % 4 == 0)
+    //if (value % 4 == 0)
         glutPostRedisplay();
 
     // registrar esse mesmo callback novamente
-    glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, value+1);
+    glutTimerFunc(worldStep, AtualizarMundo, value+1);
 }
 
 void InicializaFisica()
@@ -245,7 +298,7 @@ void InicializaFisica()
     groundBody = world.CreateBody(&groundBodyDef);
 
     b2PolygonShape groundBox;
-    groundBox.SetAsBox(50.0f, 10.0f);
+    groundBox.SetAsBox(1000.0f, 10.0f);
     groundBody->CreateFixture(&groundBox, 0.0f);
 
     // a nave
