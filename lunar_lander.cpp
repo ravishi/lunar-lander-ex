@@ -268,8 +268,6 @@ void AtualizarMundo(int value)
 
     b2Vec2 pot = shipBody->GetWorldPoint(b2Vec2(0, 0));
 
-    printf("%.4f: %f, %f\n", M_PI / 2 + angulo, pot.x, pot.y);
-
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 0)));
 
 
