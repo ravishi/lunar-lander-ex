@@ -18,7 +18,7 @@
 // Includes
 #include "bibutil.h"
 #include <Box2D/Box2D.h>
-#include <vector>
+#include <map>
 
 // Variáveis da janela
 GLint _x = 800;
@@ -41,7 +41,7 @@ GLfloat camOpeningAngle, fAspect;
 
 
 // Box2D
-b2Vec2 gravity(0.0f, -10.f);
+b2Vec2 gravity(0.0f, -10.0f);
 b2World world(gravity);
 
 b2Body *groundBody;
@@ -50,6 +50,10 @@ b2Body *shipBody;
 float32 worldTimeStep = 1.0f / 60.0f;
 int32 worldVelocityIterations = 6;
 int32 worldPositionIterations = 2;
+
+
+// teclas
+std::map<GLint, GLfloat> pressedKeys;
 
 
 
@@ -93,7 +97,7 @@ void AlteraTamanhoJanela(GLsizei w, GLsizei h)
     AtualizaVisualizacao();
 }
 
-void Teclado (unsigned char tecla, int x, int y)
+void Teclado(unsigned char tecla, int x, int y)
 {
     if (tecla==27) // ESC ?
     {
@@ -109,28 +113,30 @@ void TeclasEspeciais(int key, int x, int y)
 {
     switch (key) {
         case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
+        case GLUT_KEY_LEFT:
+        case GLUT_KEY_RIGHT:
         {
-            b2Vec2 point;
-            b2Vec2 force;
-
-            point.Set(_nx, _ny);
-            force.Set(0, 10.0f);
-
-            shipBody->ApplyForce(force, point);
+            if (pressedKeys.count(key) <= 0) {
+                pressedKeys[key] = 0;
+            }
             break; 
         }
-        case GLUT_KEY_DOWN:
-            _ny-=1;
-            break; 
-        case GLUT_KEY_LEFT:
-            //shipAngle -= 10;
-            break; 
-        case GLUT_KEY_RIGHT:
-            //shipAngle += 10;
-            break; 
     }
-    AtualizaVisualizacao();
-    glutPostRedisplay();
+}
+
+void SpecialKeyUp(int key, int x, int y)
+{
+    switch (key) {
+        case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
+        case GLUT_KEY_LEFT:
+        case GLUT_KEY_RIGHT:
+        {
+            pressedKeys.erase(key);
+            break; 
+        }
+    }
 }
 
 // Função callback chamada para gerenciar eventos do mouse
@@ -158,16 +164,67 @@ void GerenciaMouse(int button, int state, int x, int y)
 
 void AtualizarMundo(int value)
 {
+
+    // incrementar todas as teclas pressionadas
+    std::map<GLint, GLfloat>::iterator it;
+    for (it = pressedKeys.begin(); it != pressedKeys.end(); it++)
+    {
+        (*it).second += worldTimeStep;
+    }
+
+    b2Vec2 point;
+    point.Set(_nx, _ny);
+
+    b2Vec2 force;
+    force.Set(0, 0);
+
+    it = pressedKeys.find(GLUT_KEY_UP);
+    if (it != pressedKeys.end()) {
+        GLfloat factor = (*it).second;
+        if (factor > 1) {
+            factor = 1;
+        }
+
+        force.Set(force.x, 400.0f * factor);
+        //shipBody->ApplyForce(force, point);
+    }
+
+    GLfloat lmfactor = 0;
+    it = pressedKeys.find(GLUT_KEY_RIGHT);
+    if (it != pressedKeys.end()) {
+        lmfactor = (*it).second;
+        if (lmfactor > 1) {
+            lmfactor = 1;
+        }
+    }
+    else if ((it = pressedKeys.find(GLUT_KEY_LEFT)) != pressedKeys.end()) {
+        lmfactor = - (*it).second;
+        if (lmfactor < 1) {
+            lmfactor = 1;
+        }
+    }
+
+    if (lmfactor != 0) {
+        force.Set(100.0f * lmfactor, force.y);
+    }
+
+    if (force.x != 0 || force.y != 0)
+        shipBody->ApplyForce(force, point);
+
+
     world.Step(worldTimeStep,
                worldVelocityIterations,
                worldPositionIterations);
+
     b2Vec2 position = shipBody->GetPosition();
     float32 angle = shipBody->GetAngle();
 
     // sincronizar a posição da nave
     _ny = position.y;
     shipAngle = angle;
-    glutPostRedisplay();
+
+    if (value % 4 == 0)
+        glutPostRedisplay();
 
     // registrar esse mesmo callback novamente
     glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, value+1);
@@ -185,7 +242,6 @@ void InicializaFisica()
     groundBox.SetAsBox(50.0f, 10.0f);
     groundBody->CreateFixture(&groundBox, 0.0f);
 
-
     // a nave
     b2BodyDef shipBodyDef;
     shipBodyDef.type = b2_dynamicBody;
@@ -199,13 +255,12 @@ void InicializaFisica()
     vertices[1].Set(-3.345f, 0.0f);
     vertices[2].Set(3.345f, 0.0f);;
 
-
     b2PolygonShape shipShape;
     shipShape.Set(vertices, 3);
 
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &shipShape;
-    fixtureDef.density = 40.0f;
+    fixtureDef.density = 1.0f;
     fixtureDef.friction = 0.3f;
 
     shipBody->CreateFixture(&fixtureDef);
@@ -362,7 +417,11 @@ int main(int argc, char **argv)
     glutDisplayFunc(Desenha);
     glutReshapeFunc(AlteraTamanhoJanela);
     glutKeyboardFunc(Teclado);
+
+    glutIgnoreKeyRepeat(true);
     glutSpecialFunc(TeclasEspeciais);
+    glutSpecialUpFunc(SpecialKeyUp);
+
     glutMouseFunc(GerenciaMouse);
     Inicializa();
     glutMainLoop();
