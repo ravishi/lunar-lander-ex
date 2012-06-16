@@ -17,6 +17,7 @@
  */
 // Includes
 #include "bibutil.h"
+#include <stdio.h>
 #include <Box2D/Box2D.h>
 #include <map>
 
@@ -157,6 +158,11 @@ void GerenciaMouse(int button, int state, int x, int y)
     glutPostRedisplay();
 }
 
+void Escreva(char *string){//Write string on the screen
+    while(*string)
+        glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *string++);
+}
+
 /* +---------------------------------------------------------------------+
  * |                                Física                               |
  * +---------------------------------------------------------------------+
@@ -273,12 +279,24 @@ void InicializaFisica()
  * |                          Funções de desenho                         |
  * +---------------------------------------------------------------------+
  */
+void EscreveStatus(void)
+{
+    char texto[40];
+    glColor3f(1,1,1);
+    glRasterPos2f(5, 7);
+    sprintf(texto,"x : %.3f", _nx);
+    Escreva(texto);
+    glRasterPos2f(5, 5);
+    sprintf(texto,"Y : %.3f", _ny);
+    Escreva(texto);
+}
 
 void DesenhaApollo11(void)
 {
     glPushMatrix();
         glTranslatef(_nx, _ny, 0);
         glRotatef(shipAngle, 0, 0, 1);
+        EscreveStatus();
         DesenhaObjeto(apollo11);
     glPopMatrix();
 }
