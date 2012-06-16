@@ -19,7 +19,10 @@
 #include "bibutil.h"
 #include <stdio.h>
 #include <Box2D/Box2D.h>
+#include <math.h>
 #include <map>
+
+#define RAD_TO_GRAUS (180 / M_PI)
 
 // Variáveis da janela
 GLint _x = 800;
@@ -115,8 +118,8 @@ class Motor {
 };
 
 Motor motorPrincipal(500, 1000);
-Motor motorLatEsq(400, 1000);
-Motor motorLatDir(400, 1000);
+Motor motorLatEsq(50, 1000);
+Motor motorLatDir(50, 1000);
 
 
 
@@ -252,24 +255,46 @@ void AtualizarMundo(int value)
 {
     GLfloat worldStep = worldTimeStep * 1000;
 
-    b2Vec2 point;
-    point.Set(_nx, _ny);
+    b2Vec2 point(_nx, _ny);
 
-    b2Vec2 force;
-    force.Set(0, 0);
+    GLfloat angulo = shipBody->GetAngle();
 
     // atualizar o motor principal
     motorPrincipal.atualizar(worldStep);
-    motorLatEsq.atualizar(worldStep);
+    b2Vec2 force(
+            motorPrincipal.potencia() * cos(M_PI / 2 + angulo),
+            motorPrincipal.potencia() * sin(M_PI / 2 + angulo)
+        );
+
+    b2Vec2 pot = shipBody->GetWorldPoint(b2Vec2(0, 0));
+
+    printf("%.4f: %f, %f\n", M_PI / 2 + angulo, pot.x, pot.y);
+
+    shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 0)));
+
+
+    // motores laterais
     motorLatDir.atualizar(worldStep);
 
     force.Set(
-            motorLatDir.potencia() - motorLatEsq.potencia(),
-            motorPrincipal.potencia()
+            motorLatDir.potencia() * cos(M_PI + angulo),
+            motorLatDir.potencia() * sin(M_PI + angulo)
         );
 
-    if (force.x != 0 || force.y != 0)
-        shipBody->ApplyForce(force, point);
+    shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
+
+
+    motorLatEsq.atualizar(worldStep);
+
+    force.Set(
+            motorLatEsq.potencia() * cos(angulo),
+            motorLatEsq.potencia() * sin(angulo)
+        );
+
+    shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
+
+
+    // simular o mundo
 
     world.Step(worldTimeStep,
                worldVelocityIterations,
@@ -280,7 +305,7 @@ void AtualizarMundo(int value)
     // sincronizar a posição da nave
     _ny = position.y;
     _nx = position.x;
-    shipAngle = shipBody->GetAngle();
+    shipAngle = shipBody->GetAngle() * RAD_TO_GRAUS;
 
     //if (value % 4 == 0)
         glutPostRedisplay();
