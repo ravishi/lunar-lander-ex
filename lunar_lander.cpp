@@ -24,6 +24,10 @@
 
 #define RAD_TO_GRAUS (180 / M_PI)
 
+#define IMPACTO_TOLERAVEL 50
+
+#define ANGULO_TOLERAVEL 10
+
 // Variáveis da janela
 GLint _x = 800;
 GLint _y = 600;
@@ -120,6 +124,45 @@ class Motor {
 Motor motorPrincipal(500, 1000);
 Motor motorLatEsq(50, 1000);
 Motor motorLatDir(50, 1000);
+
+
+// Listener para a colisão
+class ContactListener: public b2ContactListener
+{
+    void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse)
+    {
+        bool explode = false;
+        GLfloat impacto = impulse->normalImpulses[0];
+
+        // verificar o impacto da colisão
+        if (impacto > IMPACTO_TOLERAVEL)
+        {
+            explode = true;
+        }
+
+        // verificar o ângulo de colisão
+        if (!explode) {
+            // XXX encontrar a nave. a nave é o único corpo dinâmico
+            // em nosso mundo, então é so testar isso ;D
+            b2Body *nave;
+            if (contact->GetFixtureA()->GetBody()->GetType() == b2_dynamicBody)
+                nave = contact->GetFixtureA()->GetBody();
+            else
+                nave = contact->GetFixtureB()->GetBody();
+
+            // o ângulo da nave
+            GLfloat angulo = nave->GetAngle();
+
+            // a nave explode se o ângulo de impacto estiver
+            // fora dos limites
+            if (angulo < -ANGULO_TOLERAVEL || angulo > ANGULO_TOLERAVEL) {
+                explode = true;
+            }
+        }
+    }
+};
+
+ContactListener listenerDeContato;
 
 
 
@@ -251,6 +294,23 @@ void Escreva(char *string){//Write string on the screen
  * +---------------------------------------------------------------------+
  */
 
+void CoisarColisoes()
+{
+    // verificar 
+    /*
+    for (b2Contact* contact = worldGetContactList(); contact; contact = contact->GetNext())
+    {
+        // só calcular o contato quando os corpos se
+        // chocarem efetivamente
+        if (!contact->IsTouching())
+            continue;
+
+        b2Fixture *a = contact->GetFixtureA();
+        b2Fixture *b = contact->GetFixtureB();
+    }
+    */
+}
+
 void AtualizarMundo(int value)
 {
     GLfloat worldStep = worldTimeStep * 1000;
@@ -270,7 +330,6 @@ void AtualizarMundo(int value)
 
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 0)));
 
-
     // motores laterais
     motorLatDir.atualizar(worldStep);
 
@@ -281,7 +340,6 @@ void AtualizarMundo(int value)
 
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
-
     motorLatEsq.atualizar(worldStep);
 
     force.Set(
@@ -291,6 +349,8 @@ void AtualizarMundo(int value)
 
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
+    // coisar as colisões
+    CoisarColisoes();
 
     // simular o mundo
 
@@ -349,6 +409,10 @@ void InicializaFisica()
 
     // definir um timer para atualizar o mundo
     glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, 0);
+
+    // definir o listener de contato para detectar o 
+    // momento do pouso
+    world.SetContactListener(&listenerDeContato);
 }
 
 /* +---------------------------------------------------------------------+
