@@ -22,47 +22,17 @@
 #include <math.h>
 #include <map>
 
+
+/* +---------------------------------------------------------------------+
+ * |                         Definições e Tipos                          |
+ * +---------------------------------------------------------------------+
+ */
+
 #define RAD_TO_GRAUS (180 / M_PI)
 
 #define IMPACTO_TOLERAVEL 50
 
 #define ANGULO_TOLERAVEL 10
-
-// Variáveis da janela
-GLint _x = 800;
-GLint _y = 600;
-
-// Variáveis da nave
-OBJ *apollo11;
-GLfloat _nx;
-GLfloat _ny;
-
-GLfloat shipAngle;
-
-//Variáveis do mapa
-OBJ *mapa;
-TEX *texFundo;
-
-// Variáveis do observador
-// Angulo de abertura da câmera e aspecto de visão
-GLfloat camOpeningAngle, fAspect;
-
-
-// Box2D
-b2Vec2 gravity(0.0f, -10.0f);
-b2World world(gravity);
-
-b2Body *groundBody;
-b2Body *shipBody;
-
-float32 worldTimeStep = 1.0f / 60.0f;
-int32 worldVelocityIterations = 6;
-int32 worldPositionIterations = 2;
-
-
-// teclas
-std::map<GLint, GLfloat> pressedKeys;
-
 
 class Motor {
     public:
@@ -121,11 +91,6 @@ class Motor {
         bool _ligado;
 };
 
-Motor motorPrincipal(500, 1000);
-Motor motorLatEsq(50, 1000);
-Motor motorLatDir(50, 1000);
-
-
 // Listener para a colisão
 class ContactListener: public b2ContactListener
 {
@@ -138,6 +103,8 @@ class ContactListener: public b2ContactListener
         if (impacto > IMPACTO_TOLERAVEL)
         {
             explode = true;
+
+            printf("Impacto: %.4f\n", impacto);
         }
 
         // verificar o ângulo de colisão
@@ -157,13 +124,63 @@ class ContactListener: public b2ContactListener
             // fora dos limites
             if (angulo < -ANGULO_TOLERAVEL || angulo > ANGULO_TOLERAVEL) {
                 explode = true;
+
+                printf("Você caiu com um ângulo de %.4f graus.\n", angulo);
             }
+        }
+
+        if (explode) {
+            printf("Você explodiu!\n");
         }
     }
 };
 
-ContactListener listenerDeContato;
 
+/* +---------------------------------------------------------------------+
+ * |                          Variáveis Globais                          |
+ * +---------------------------------------------------------------------+
+ */
+
+// Variáveis da janela
+GLint _x = 800;
+GLint _y = 600;
+
+// Variáveis da nave
+OBJ *apollo11;
+GLfloat _nx;
+GLfloat _ny;
+
+GLfloat shipAngle;
+
+//Variáveis do mapa
+OBJ *mapa;
+TEX *texFundo;
+
+// Variáveis do observador
+// Angulo de abertura da câmera e aspecto de visão
+GLfloat camOpeningAngle, fAspect;
+
+
+// Box2D
+b2Vec2 gravity(0.0f, -10.0f);
+b2World world(gravity);
+
+// os corpos
+b2Body *groundBody;
+b2Body *shipBody;
+
+// constantes para a simulação da física
+float32 worldTimeStep = 1.0f / 60.0f;
+int32 worldVelocityIterations = 6;
+int32 worldPositionIterations = 2;
+
+// motores
+Motor motorPrincipal(500, 1000);
+Motor motorLatEsq(50, 1000);
+Motor motorLatDir(50, 1000);
+
+// listener para detectar o momento da colisão
+ContactListener listenerDeContato;
 
 
 /* +---------------------------------------------------------------------+
@@ -294,81 +311,60 @@ void Escreva(char *string){//Write string on the screen
  * +---------------------------------------------------------------------+
  */
 
-void CoisarColisoes()
-{
-    // verificar 
-    /*
-    for (b2Contact* contact = worldGetContactList(); contact; contact = contact->GetNext())
-    {
-        // só calcular o contato quando os corpos se
-        // chocarem efetivamente
-        if (!contact->IsTouching())
-            continue;
-
-        b2Fixture *a = contact->GetFixtureA();
-        b2Fixture *b = contact->GetFixtureB();
-    }
-    */
-}
-
 void AtualizarMundo(int value)
 {
+    // o step do mundo. vamos precisar desse valor para chamar alguns métodos,
+    // então é melhor colocá-lo em uma variável local.
     GLfloat worldStep = worldTimeStep * 1000;
 
-    b2Vec2 point(_nx, _ny);
-
+    // o ângulo atual da nave (radianos)
     GLfloat angulo = shipBody->GetAngle();
 
     // atualizar o motor principal
     motorPrincipal.atualizar(worldStep);
+
+    // aplicar sobre a nave a força gerada pelo motor principal
     b2Vec2 force(
             motorPrincipal.potencia() * cos(M_PI / 2 + angulo),
             motorPrincipal.potencia() * sin(M_PI / 2 + angulo)
         );
 
-    b2Vec2 pot = shipBody->GetWorldPoint(b2Vec2(0, 0));
-
+    // a força é aplicada sobre o ponto (0, 0) [a base] da nave
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 0)));
 
-    // motores laterais
+    // atualizar motores laterais, aplicar suas forças sobre a nave, etc
     motorLatDir.atualizar(worldStep);
-
     force.Set(
             motorLatDir.potencia() * cos(M_PI + angulo),
             motorLatDir.potencia() * sin(M_PI + angulo)
         );
-
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
     motorLatEsq.atualizar(worldStep);
-
     force.Set(
             motorLatEsq.potencia() * cos(angulo),
             motorLatEsq.potencia() * sin(angulo)
         );
-
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
-    // coisar as colisões
-    CoisarColisoes();
-
-    // simular o mundo
-
+    // simular a física do mundo
     world.Step(worldTimeStep,
                worldVelocityIterations,
                worldPositionIterations);
 
+    // sincronizar a posição da nave na simulação física com a visualização
     b2Vec2 position = shipBody->GetPosition();
 
-    // sincronizar a posição da nave
     _ny = position.y;
     _nx = position.x;
+
     shipAngle = shipBody->GetAngle() * RAD_TO_GRAUS;
 
     //if (value % 4 == 0)
         glutPostRedisplay();
 
-    // registrar esse mesmo callback novamente
+    // registrar esse mesmo callback novamente. ele deverá ser chamado
+    // repetidamente.
     glutTimerFunc(worldStep, AtualizarMundo, value+1);
 }
 
@@ -407,10 +403,10 @@ void InicializaFisica()
 
     shipBody->CreateFixture(&fixtureDef);
 
-    // definir um timer para atualizar o mundo
+    // instalar um timer para atualizar o mundo
     glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, 0);
 
-    // definir o listener de contato para detectar o 
+    // instalar o listener de contato para detectar o 
     // momento do pouso
     world.SetContactListener(&listenerDeContato);
 }
