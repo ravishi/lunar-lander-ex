@@ -34,20 +34,88 @@
 
 #define ANGULO_TOLERAVEL 10
 
+
+/**
+ * Um simples tanque de combustível.
+ */
+class TanqueCombustivel {
+    public:
+        TanqueCombustivel(GLfloat combustivel)
+        {
+            _combustivel = combustivel;
+        }
+
+        GLfloat combustivel() const {
+            return _combustivel;
+        }
+
+        /**
+         * Gasta uma quantidade de combustível do tanque. Retorna um valor
+         * menor ou igual à quantidade solicitada, dependendo da quantidade de
+         * combustível presente no tanque.
+         */
+        GLfloat gastar(GLfloat quant) {
+            if (_combustivel <= 0)
+                return 0;
+
+            if (quant >= _combustivel) {
+                quant = _combustivel;
+                _combustivel = 0;
+            } else {
+                _combustivel -= quant;
+            }
+
+            return quant;
+        }
+
+    private:
+        GLfloat _combustivel;
+};
+
+
+/**
+ * Um simples motor. Motores possuem uma potência máxima, um tempo de
+ * inicialização (o tempo que o motor leva para chegar à potência máxima) e
+ * podem ter um tanque de combustível associado.
+ *
+ * Enquanto o motor estiver ligado, sua potência será incrementada
+ * gradativamente, até atingir a potência máxima. Quando o motor for
+ * desligador, sua potência decrescerá gradativamente até zero. Se o
+ * combustível acabar, o motor parará de funcionar (sua potência será sempre
+ * zero).
+ *
+ * Quando houver um tanque associado, o motor gastará combustível do tanque e
+ * sua potência será cortada quando o combustível no tanque acabar.
+ */
 class Motor {
     public:
-        Motor(GLfloat potencia_max, GLfloat tempo_inic)
+        /**
+         * potencia: a potência do motor.
+         * tempo_inic: o tempo de inicialização do motor. dado em milisegundos.
+         * tanque: um tanque de combustível. pode ser NULL, indicando que o
+         *         motor não gastará combustível.
+         */
+        Motor(GLfloat potencia, unsigned int tempo_inic = 1000, TanqueCombustivel *tanque = NULL)
         {
-            _potencia_max = potencia_max;
-            _potencia_atual = 0;
             _ligado = false;
+            _tanque = tanque;
+            _potencia = 0;
+            _potencia_max = potencia;
             _tempo_inic = tempo_inic;
         }
 
-        bool ligado() {
+        void setTanque(TanqueCombustivel *tanque)
+        {
+            _tanque = tanque;
+        }
+
+        bool ligado() const {
             return _ligado;
         }
 
+        /**
+         * Desliga o motor.
+         */
         bool desligar() {
             if (!ligado()) {
                 return false;
@@ -55,40 +123,63 @@ class Motor {
             _ligado = false;
         }
 
+        /**
+         * Liga o motor.
+         */
         bool ligar() {
             if (ligado()) {
                 return false;
             }
             _ligado = true;
-            _potencia_atual = 0;
+            _potencia = 0;
         }
 
-        GLfloat potencia() {
-            return _potencia_atual;
+        GLfloat potencia() const {
+            return _potencia;
         }
 
+        /**
+         * Atualiza o motor. Step é o tempo desde a última atualização (dado em
+         * milisegundos).
+         */
         void atualizar(GLfloat step) {
-            // step é o tempo decorrido desde a ultima atualização
-            if (ligado() && _potencia_atual < _potencia_max) {
-                _potencia_atual += (_potencia_max / _tempo_inic) * step;
-                if (_potencia_atual > _potencia_max) {
-                    _potencia_atual = _potencia_max;
+            if (step <= 0)
+                return;
+
+            if (_tanque != NULL && !_tanque->combustivel())
+            {
+                _potencia = 0;
+                return;
+            }
+
+            GLfloat old = _potencia;
+
+            if (ligado() && _potencia < _potencia_max) {
+                _potencia += (_potencia_max / _tempo_inic) * step;
+                if (_potencia > _potencia_max) {
+                    _potencia = _potencia_max;
+                }
+            } else if (!ligado() && _potencia > 0) {
+                _potencia -= (_potencia_max / _tempo_inic) * step;
+                if (_potencia < 0) {
+                    _potencia = 0;
                 }
             }
-            else if (!ligado() && _potencia_atual > 0) {
-                _potencia_atual -= (_potencia_max / _tempo_inic) * step;
-                if (_potencia_atual < 0) {
-                    _potencia_atual = 0;
-                }
+
+            GLfloat media = (_potencia + old) / 2;
+            if (_tanque != NULL && media) {
+                // TODO calcular um multiplicador mais adequado para o fator
+                GLfloat fator = step * 0.001;
+                _potencia = _tanque->gastar(media * fator) / fator;
             }
-            //printf("%.5f %.5f\n", step, _potencia_atual);
         }
 
     private:
-        GLfloat _potencia_max;
-        GLfloat _potencia_atual;
-        GLfloat _tempo_inic;
         bool _ligado;
+        GLfloat _potencia;
+        GLfloat _potencia_max;
+        unsigned int _tempo_inic;
+        TanqueCombustivel *_tanque;
 };
 
 // Listener para a colisão
@@ -175,9 +266,11 @@ int32 worldVelocityIterations = 6;
 int32 worldPositionIterations = 2;
 
 // motores
-Motor motorPrincipal(500, 1000);
-Motor motorLatEsq(50, 1000);
-Motor motorLatDir(50, 1000);
+Motor motorPrincipal(500);
+Motor motorLatEsq(50);
+Motor motorLatDir(50);
+
+TanqueCombustivel *tanque = NULL;
 
 // listener para detectar o momento da colisão
 ContactListener listenerDeContato;
@@ -347,6 +440,10 @@ void AtualizarMundo(int value)
         );
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
+    // o gasto de combustível deve associar, de alguma forma, a potência atual
+    // do motor ao tempo que o motor fica ligado.
+    GLfloat potencia = motorLatEsq.potencia() + motorLatDir.potencia() + motorPrincipal.potencia();
+
     // simular a física do mundo
     world.Step(worldTimeStep,
                worldVelocityIterations,
@@ -403,6 +500,12 @@ void InicializaFisica()
 
     shipBody->CreateFixture(&fixtureDef);
 
+    // definir um tanque de combustível
+    tanque = new TanqueCombustivel(1000);
+    motorPrincipal.setTanque(tanque);
+    motorLatDir.setTanque(tanque);
+    motorLatEsq.setTanque(tanque);
+
     // instalar um timer para atualizar o mundo
     glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, 0);
 
@@ -425,6 +528,10 @@ void EscreveStatus(void)
     glRasterPos2f(5, 5);
     sprintf(texto,"Y : %.3f", _ny);
     Escreva(texto);
+
+    if (tanque != NULL) {
+        printf("Combustível: %.4f\n", tanque->combustivel());
+    }
 }
 
 void DesenhaApollo11(void)
