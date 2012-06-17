@@ -440,10 +440,6 @@ void AtualizarMundo(int value)
         );
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
-    // o gasto de combustível deve associar, de alguma forma, a potência atual
-    // do motor ao tempo que o motor fica ligado.
-    GLfloat potencia = motorLatEsq.potencia() + motorLatDir.potencia() + motorPrincipal.potencia();
-
     // simular a física do mundo
     world.Step(worldTimeStep,
                worldVelocityIterations,
