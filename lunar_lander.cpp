@@ -174,6 +174,7 @@ ContactListener listenerDeContato;
 // Função usada para especificar o volume de visualização
 void AtualizaVisualizacao(void)
 {
+    GLfloat cam_nx = _nx;
     // Especifica sistema de coordenadas de projeção
     glMatrixMode(GL_PROJECTION);
     // Inicializa sistema de coordenadas de projeção
@@ -186,9 +187,14 @@ void AtualizaVisualizacao(void)
     glMatrixMode(GL_MODELVIEW);
     // Inicializa sistema de coordenadas do modelo
     glLoadIdentity();
+    
+    if(cam_nx > 60)
+        cam_nx = 60;
+    if(cam_nx < -60)
+        cam_nx = -60;
 
     // Especifica posição do observador e do alvo
-    gluLookAt(_nx, 30, 80,   _nx, _ny, 0,   0, 1, 0);
+    gluLookAt(cam_nx, 30, 80,   cam_nx, _ny, 0,   0, 1, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -272,12 +278,12 @@ void GerenciaMouse(int button, int state, int x, int y)
 
     if (button == GLUT_LEFT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-in
-            if (camOpeningAngle >= 10)
+            if (camOpeningAngle >= 15)
                 camOpeningAngle -= 5;
         }
     if (button == GLUT_RIGHT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-out
-            if (camOpeningAngle <= 130)
+            if (camOpeningAngle <= 40)
                 camOpeningAngle += 5;
         }
     AtualizaVisualizacao();
@@ -435,8 +441,8 @@ void DesenhaApollo11(void)
 {
     glPushMatrix();
         glTranslatef(_nx, _ny, 0);
-        glRotatef(shipAngle, 0, 0, 1);
         EscreveStatus();
+        glRotatef(shipAngle, 0, 0, 1);
         DesenhaObjeto(apollo11);
     glPopMatrix();
 }
