@@ -1,7 +1,6 @@
-- combustível
+- problema com motores laterais( eles não podem ter a mesma dinãmica de
+  aceleração do principal)
 - animação da explosão
-- mostradores
-- limitar câmera
 - animação das turbinas
 - menus (começar jogo, repetir, etc)
 
@@ -12,3 +11,6 @@ se possível:
 
 FEITO:
 - impacto
+- limitação de camera
+- combustível
+- mostradores

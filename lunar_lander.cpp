@@ -131,7 +131,6 @@ class Motor {
                 return false;
             }
             _ligado = true;
-            _potencia = 0;
         }
 
         GLfloat potencia() const {
@@ -266,7 +265,7 @@ int32 worldVelocityIterations = 6;
 int32 worldPositionIterations = 2;
 
 // motores
-Motor motorPrincipal(500);
+Motor motorPrincipal(400);
 Motor motorLatEsq(50);
 Motor motorLatDir(50);
 
@@ -284,6 +283,7 @@ ContactListener listenerDeContato;
 // Função usada para especificar o volume de visualização
 void AtualizaVisualizacao(void)
 {
+    GLfloat cam_nx = _nx;
     // Especifica sistema de coordenadas de projeção
     glMatrixMode(GL_PROJECTION);
     // Inicializa sistema de coordenadas de projeção
@@ -296,9 +296,14 @@ void AtualizaVisualizacao(void)
     glMatrixMode(GL_MODELVIEW);
     // Inicializa sistema de coordenadas do modelo
     glLoadIdentity();
+    
+    if(cam_nx > 60)
+        cam_nx = 60;
+    if(cam_nx < -60)
+        cam_nx = -60;
 
     // Especifica posição do observador e do alvo
-    gluLookAt(_nx, 30, 80,   _nx, _ny, 0,   0, 1, 0);
+    gluLookAt(cam_nx, 30, 80,   cam_nx, _ny, 0,   0, 1, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -331,7 +336,7 @@ void Teclado(unsigned char tecla, int x, int y)
 void TeclasEspeciais(int key, int x, int y)
 {
     switch (key) {
-        case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
             motorPrincipal.ligar();
             break;
         case GLUT_KEY_LEFT:
@@ -340,22 +345,13 @@ void TeclasEspeciais(int key, int x, int y)
         case GLUT_KEY_RIGHT:
             motorLatDir.ligar();
             break;
-            /*
-        case GLUT_KEY_DOWN:
-        {
-            if (pressedKeys.count(key) <= 0) {
-                pressedKeys[key] = 0;
-            }
-            break; 
-        }
-        */
     }
 }
 
 void SpecialKeyUp(int key, int x, int y)
 {
     switch (key) {
-        case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
             motorPrincipal.desligar();
             break;
         case GLUT_KEY_LEFT:
@@ -364,15 +360,6 @@ void SpecialKeyUp(int key, int x, int y)
         case GLUT_KEY_RIGHT:
             motorLatDir.desligar();
             break;
-            /*
-        case GLUT_KEY_DOWN:
-        case GLUT_KEY_LEFT:
-        case GLUT_KEY_RIGHT:
-        {
-            pressedKeys.erase(key);
-            break; 
-        }
-        */
     }
 }
 
@@ -382,12 +369,12 @@ void GerenciaMouse(int button, int state, int x, int y)
 
     if (button == GLUT_LEFT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-in
-            if (camOpeningAngle >= 10)
+            if (camOpeningAngle >= 15)
                 camOpeningAngle -= 5;
         }
     if (button == GLUT_RIGHT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-out
-            if (camOpeningAngle <= 130)
+            if (camOpeningAngle <= 40)
                 camOpeningAngle += 5;
         }
     AtualizaVisualizacao();
@@ -440,8 +427,9 @@ void AtualizarMundo(int value)
         );
     shipBody->ApplyForce(force, shipBody->GetWorldPoint(b2Vec2(0, 5)));
 
-    // simular a física do mundo
-    world.Step(worldTimeStep,
+    // simular o mundo
+    // Foi acelerado o step do mundo para melhorar a fuidez do jogo
+    world.Step(worldTimeStep*1.5,
                worldVelocityIterations,
                worldPositionIterations);
 
@@ -524,9 +512,13 @@ void EscreveStatus(void)
     glRasterPos2f(5, 5);
     sprintf(texto,"Y : %.3f", _ny);
     Escreva(texto);
-
+    glRasterPos2f(5, 3);
+    sprintf(texto,"Pow : %d\%",(int)(motorPrincipal.potencia()/4) );
+    Escreva(texto);
     if (tanque != NULL) {
-        printf("Combustível: %.4f\n", tanque->combustivel());
+        glRasterPos2f(5, 1);
+        sprintf(texto,"Combustível: %.4f", tanque->combustivel());
+        Escreva(texto);
     }
 }
 
@@ -534,8 +526,8 @@ void DesenhaApollo11(void)
 {
     glPushMatrix();
         glTranslatef(_nx, _ny, 0);
-        glRotatef(shipAngle, 0, 0, 1);
         EscreveStatus();
+        glRotatef(shipAngle, 0, 0, 1);
         DesenhaObjeto(apollo11);
     glPopMatrix();
 }
