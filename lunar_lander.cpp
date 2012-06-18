@@ -90,7 +90,6 @@ class Motor {
                 return false;
             }
             _ligado = true;
-            _potencia_atual = 0;
         }
 
         GLfloat potencia() {
@@ -121,9 +120,9 @@ class Motor {
         bool _ligado;
 };
 
-Motor motorPrincipal(500, 1000);
-Motor motorLatEsq(50, 1000);
-Motor motorLatDir(50, 1000);
+Motor motorPrincipal(400, 1000);
+Motor motorLatEsq(100, 1000);
+Motor motorLatDir(100, 1000);
 
 
 // Listener para a colisão
@@ -227,7 +226,7 @@ void Teclado(unsigned char tecla, int x, int y)
 void TeclasEspeciais(int key, int x, int y)
 {
     switch (key) {
-        case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
             motorPrincipal.ligar();
             break;
         case GLUT_KEY_LEFT:
@@ -236,22 +235,13 @@ void TeclasEspeciais(int key, int x, int y)
         case GLUT_KEY_RIGHT:
             motorLatDir.ligar();
             break;
-            /*
-        case GLUT_KEY_DOWN:
-        {
-            if (pressedKeys.count(key) <= 0) {
-                pressedKeys[key] = 0;
-            }
-            break; 
-        }
-        */
     }
 }
 
 void SpecialKeyUp(int key, int x, int y)
 {
     switch (key) {
-        case GLUT_KEY_UP:
+        case GLUT_KEY_DOWN:
             motorPrincipal.desligar();
             break;
         case GLUT_KEY_LEFT:
@@ -260,15 +250,6 @@ void SpecialKeyUp(int key, int x, int y)
         case GLUT_KEY_RIGHT:
             motorLatDir.desligar();
             break;
-            /*
-        case GLUT_KEY_DOWN:
-        case GLUT_KEY_LEFT:
-        case GLUT_KEY_RIGHT:
-        {
-            pressedKeys.erase(key);
-            break; 
-        }
-        */
     }
 }
 
@@ -359,8 +340,8 @@ void AtualizarMundo(int value)
     CoisarColisoes();
 
     // simular o mundo
-
-    world.Step(worldTimeStep,
+    // Foi acelerado o step do mundo para melhorar a fuidez do jogo
+    world.Step(worldTimeStep*1.5,
                worldVelocityIterations,
                worldPositionIterations);
 
@@ -434,6 +415,9 @@ void EscreveStatus(void)
     Escreva(texto);
     glRasterPos2f(5, 5);
     sprintf(texto,"Y : %.3f", _ny);
+    Escreva(texto);
+    glRasterPos2f(5, 3);
+    sprintf(texto,"Pow : %d\%",(int)(motorPrincipal.potencia()/4) );
     Escreva(texto);
 }
 

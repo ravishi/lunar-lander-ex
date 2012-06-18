@@ -1,8 +1,9 @@
+- problema com motores laterais( eles não podem ter a mesma dinãmica de
+  aceleração do principal)
 - combustível
 - impacto
 - animação da explosão
-- mostradores
-- limitar câmera
+- mostradores(so falta o de combustível)
 - animação das turbinas
 - menus (começar jogo, repetir, etc)
 
