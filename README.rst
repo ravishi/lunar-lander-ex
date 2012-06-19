@@ -125,7 +125,7 @@ Dentro da pasta do lunar-lander-ex, baixe e compile o Box2D.
 
 ::
     
-    wget http://box2d.googlecode.com/files/Box2D_v2.2.http://9gag.com/gag/4525397?#_=_1.zip
+    wget http://box2d.googlecode.com/files/Box2D_v2.2.1.zip
     unzip Box2D_v2.2.1.zip
     cd Box2D_v2.2.1
     cmake -G "MSYS Makefiles" .
