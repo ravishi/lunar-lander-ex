@@ -28,7 +28,7 @@
  * +---------------------------------------------------------------------+
  */
 
-#define FPS 45
+#define FPS 60
 
 #define SCALA 1000
 
@@ -37,6 +37,8 @@
 #define IMPACTO_TOLERAVEL 50
 
 #define ANGULO_TOLERAVEL 10
+
+#define PESO_TAXA_FPS 0.1
 
 
 /**
@@ -274,6 +276,80 @@ class ControleZoom
 };
 
 
+class Relogio
+{
+    public:
+        Relogio()
+            : _iniciado(false),
+              _inicio(0),
+              _ultimoTique(0) { }
+
+        int iniciar() {
+            _ultimoTique = _inicio = tempoDecorrido();
+            _iniciado = true;
+        }
+
+        int tique() {
+            if (!_iniciado) {
+                iniciar();
+            }
+
+            int atual = tempoDecorrido();
+            int dif = atual - _ultimoTique;
+
+            _ultimoTique = atual;
+
+            return dif;
+        }
+
+        int decorrido() const {
+            return _ultimoTique - _inicio;
+        }
+
+    protected:
+        int tempoDecorrido() const {
+            return glutGet(GLUT_ELAPSED_TIME);
+        }
+
+    private:
+        bool _iniciado;
+        int _inicio;
+        int _ultimoTique;
+};
+
+
+class AcumuladorTemporal
+{
+    public:
+        AcumuladorTemporal(int alvo)
+            : _relogio()
+        {
+            _alvo = alvo;
+            printf("acumulador: %i\n", alvo);
+        }
+
+        int alvo() const {
+            return _alvo;
+        }
+
+        int acumular()
+        {
+            int r = 0;
+            _acumulado += _relogio.tique();
+            if (_acumulado >= _alvo) {
+                r = _acumulado;
+                _acumulado = 0;
+            }
+            return r;
+        }
+
+    private:
+        int _acumulado;
+        int _alvo;
+        Relogio _relogio;
+};
+
+
 /* +---------------------------------------------------------------------+
  * |                          Variáveis Globais                          |
  * +---------------------------------------------------------------------+
@@ -300,7 +376,7 @@ GLfloat camOpeningAngle, fAspect;
 
 
 // Box2D
-b2Vec2 gravity(0.0f, -1.63f);
+b2Vec2 gravity(0.0f, -10.0f);
 b2World world(gravity);
 
 // os corpos
@@ -324,6 +400,13 @@ ContactListener listenerDeContato;
 
 
 ControleZoom zoomctl(45, 15, 45, 10);
+
+
+// controle de tempo, sincronia, etc
+GLfloat timePerFrame = 1000.0 / FPS;
+
+AcumuladorTemporal acumuladorTemporal(worldTimeStep * 1000);
+AcumuladorTemporal acumuladorVideo(1000.0 / FPS);
 
 
 /* +---------------------------------------------------------------------+
@@ -444,15 +527,8 @@ void Escreva(char *string){//Write string on the screen
  * +---------------------------------------------------------------------+
  */
 
-void AtualizarMundo(int value)
+void AtualizarMundoEfetivamente(int worldStep)
 {
-    // o step do mundo. vamos precisar desse valor para chamar alguns métodos,
-    // então é melhor colocá-lo em uma variável local.
-    GLfloat worldStep = worldTimeStep * 1000;
-
-    // atualziar o zoom
-    zoomctl.atualizar(worldStep);
-
     // o ângulo atual da nave (radianos)
     GLfloat angulo = shipBody->GetAngle();
 
@@ -496,10 +572,18 @@ void AtualizarMundo(int value)
     _nx = position.x;
 
     shipAngle = shipBody->GetAngle() * RAD_TO_GRAUS;
+}
+
+void AtualizarMundo(int value)
+{
+    int tempo = acumuladorTemporal.acumular();
+    if (tempo != 0) {
+        AtualizarMundoEfetivamente(tempo);
+    }
 
     // registrar esse mesmo callback novamente. ele deverá ser chamado
     // repetidamente.
-    glutTimerFunc(worldStep, AtualizarMundo, value+1);
+    //glutTimerFunc(acumuladorTemporal.alvo(), AtualizarMundo, value+1);
 }
 
 void InicializaFisica()
@@ -532,7 +616,7 @@ void InicializaFisica()
 
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &shipShape;
-    fixtureDef.density = 4.0f;
+    fixtureDef.density = 1.0f;
     fixtureDef.friction = 0.3f;
 
     shipBody->CreateFixture(&fixtureDef);
@@ -618,8 +702,20 @@ void DesenhaFundo(void)
 
 void atualizaTela(int value)
 {
-    glutTimerFunc(FPS / 1000.0, atualizaTela, value+1);
-    glutPostRedisplay();
+    int tempo = acumuladorVideo.acumular();
+
+    if (tempo != 0) {
+        timePerFrame = timePerFrame * PESO_TAXA_FPS + tempo * (1.0 - PESO_TAXA_FPS);
+
+        printf("tempo: %i, fps: %.3f\n", tempo, 1000.0 / timePerFrame);
+
+        // atualziar o zoom
+        zoomctl.atualizar(tempo);
+
+        glutPostRedisplay();
+    }
+
+    glutTimerFunc(acumuladorVideo.alvo(), atualizaTela, value+1);
 }
 
 
