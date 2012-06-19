@@ -226,6 +226,50 @@ class ContactListener: public b2ContactListener
 };
 
 
+class ControleZoom
+{
+    public:
+        ControleZoom(GLfloat cur, GLfloat min, GLfloat max, GLfloat speed=10) {
+            _cur = cur;
+            _min = min;
+            _max = max;
+            _target = cur;
+            _speed = speed;
+        }
+
+        GLfloat atual() const {
+            return _cur;
+        }
+
+        void atualizar(GLfloat step) {
+            GLfloat diff = (_speed / 1000) * step;
+            if (_cur < _target && _cur + diff <= _target) {
+                _cur += diff;
+            } else if (_cur > _target && _cur - diff >= _target) {
+                _cur -= diff;
+            }
+        }
+
+        void inc() {
+            if (_target < _max)
+                _target += _speed;
+        }
+
+        void dec() {
+            if (_target > _min)
+                _target -= _speed;
+        }
+
+    private:
+        bool _inc;
+        GLfloat _cur;
+        GLfloat _target;
+        GLfloat _speed;
+        GLfloat _min;
+        GLfloat _max;
+};
+
+
 /* +---------------------------------------------------------------------+
  * |                          Variáveis Globais                          |
  * +---------------------------------------------------------------------+
@@ -275,6 +319,9 @@ TanqueCombustivel *tanque = NULL;
 ContactListener listenerDeContato;
 
 
+ControleZoom zoomctl(45, 15, 45, 10);
+
+
 /* +---------------------------------------------------------------------+
  * |                        Funções de uso geral                         |
  * +---------------------------------------------------------------------+
@@ -290,7 +337,7 @@ void AtualizaVisualizacao(void)
     glLoadIdentity();
 
     // Especifica a projeção perspectiva
-    gluPerspective(camOpeningAngle,fAspect,10, 500);
+    gluPerspective(zoomctl.atual(), fAspect, 10, 500);
 
     // Especifica sistema de coordenadas do modelo
     glMatrixMode(GL_MODELVIEW);
@@ -371,11 +418,13 @@ void GerenciaMouse(int button, int state, int x, int y)
         if (state == GLUT_DOWN) {  // Zoom-in
             if (camOpeningAngle >= 15)
                 camOpeningAngle -= 5;
+            zoomctl.dec();
         }
     if (button == GLUT_RIGHT_BUTTON)
         if (state == GLUT_DOWN) {  // Zoom-out
             if (camOpeningAngle <= 40)
                 camOpeningAngle += 5;
+            zoomctl.inc();
         }
     AtualizaVisualizacao();
     glutPostRedisplay();
@@ -395,7 +444,10 @@ void AtualizarMundo(int value)
 {
     // o step do mundo. vamos precisar desse valor para chamar alguns métodos,
     // então é melhor colocá-lo em uma variável local.
-    GLfloat worldStep = worldTimeStep * 1000;
+    GLfloat worldStep = worldTimeStep * 1500;
+
+    // atualziar o zoom
+    zoomctl.atualizar(worldStep);
 
     // o ângulo atual da nave (radianos)
     GLfloat angulo = shipBody->GetAngle();
@@ -429,7 +481,7 @@ void AtualizarMundo(int value)
 
     // simular o mundo
     // Foi acelerado o step do mundo para melhorar a fuidez do jogo
-    world.Step(worldTimeStep*1.5,
+    world.Step(worldTimeStep,
                worldVelocityIterations,
                worldPositionIterations);
 
@@ -485,7 +537,7 @@ void InicializaFisica()
     shipBody->CreateFixture(&fixtureDef);
 
     // definir um tanque de combustível
-    tanque = new TanqueCombustivel(1000);
+    tanque = new TanqueCombustivel(100000);
     motorPrincipal.setTanque(tanque);
     motorLatDir.setTanque(tanque);
     motorLatEsq.setTanque(tanque);
