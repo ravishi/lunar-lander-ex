@@ -28,6 +28,10 @@
  * +---------------------------------------------------------------------+
  */
 
+#define FPS 45
+
+#define SCALA 1000
+
 #define RAD_TO_GRAUS (180 / M_PI)
 
 #define IMPACTO_TOLERAVEL 50
@@ -296,7 +300,7 @@ GLfloat camOpeningAngle, fAspect;
 
 
 // Box2D
-b2Vec2 gravity(0.0f, -10.0f);
+b2Vec2 gravity(0.0f, -1.63f);
 b2World world(gravity);
 
 // os corpos
@@ -350,7 +354,7 @@ void AtualizaVisualizacao(void)
         cam_nx = -60;
 
     // Especifica posição do observador e do alvo
-    gluLookAt(cam_nx, 30, 80,   cam_nx, _ny, 0,   0, 1, 0);
+    gluLookAt(cam_nx, 30, 80, cam_nx, _ny, 0,   0, 1, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -444,7 +448,7 @@ void AtualizarMundo(int value)
 {
     // o step do mundo. vamos precisar desse valor para chamar alguns métodos,
     // então é melhor colocá-lo em uma variável local.
-    GLfloat worldStep = worldTimeStep * 1500;
+    GLfloat worldStep = worldTimeStep * 1000;
 
     // atualziar o zoom
     zoomctl.atualizar(worldStep);
@@ -493,9 +497,6 @@ void AtualizarMundo(int value)
 
     shipAngle = shipBody->GetAngle() * RAD_TO_GRAUS;
 
-    //if (value % 4 == 0)
-        glutPostRedisplay();
-
     // registrar esse mesmo callback novamente. ele deverá ser chamado
     // repetidamente.
     glutTimerFunc(worldStep, AtualizarMundo, value+1);
@@ -531,7 +532,7 @@ void InicializaFisica()
 
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &shipShape;
-    fixtureDef.density = 1.0f;
+    fixtureDef.density = 4.0f;
     fixtureDef.friction = 0.3f;
 
     shipBody->CreateFixture(&fixtureDef);
@@ -543,7 +544,7 @@ void InicializaFisica()
     motorLatEsq.setTanque(tanque);
 
     // instalar um timer para atualizar o mundo
-    glutTimerFunc(worldTimeStep * 1000, AtualizarMundo, 0);
+    glutTimerFunc(worldTimeStep * 1000.0, AtualizarMundo, 0);
 
     // instalar o listener de contato para detectar o 
     // momento do pouso
@@ -614,6 +615,13 @@ void DesenhaFundo(void)
  * |                            Laço de desenho                          |
  * +---------------------------------------------------------------------+
  */
+
+void atualizaTela(int value)
+{
+    glutTimerFunc(FPS / 1000.0, atualizaTela, value+1);
+    glutPostRedisplay();
+}
+
 
 void Desenha(void)
 {
@@ -702,6 +710,9 @@ void Inicializa(void)
     InicializaLoaders();
 
     InicializaFisica();
+
+    // instalar um timer para atualizar a tela (redesenhar as coisas)
+    glutTimerFunc(FPS / 1000.0, atualizaTela, 0);
 }
 
 /* +---------------------------------------------------------------------+
