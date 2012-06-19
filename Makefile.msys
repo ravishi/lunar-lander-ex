@@ -1,6 +1,6 @@
 CC=g++
-CPPFLAGS=-g -c -w -Wall -pedantic -I/usr/local/include -I./box2d/include
-LDFLAGS=-g -L/usr/local/lib -L./box2d/lib
+CPPFLAGS=-g -c -w -Wall -pedantic -I/usr/local/include -I./Box2D_v2.2.1
+LDFLAGS=-g -L/usr/local/lib -L./Box2D_v2.2.1/Box2D
 LIBS=-lopengl32 -lglu32 -lfreeglut -lm -ljpeg -lBox2D
 
 all: lunar_lander
