@@ -61,7 +61,7 @@ Naquela época, utilizamos as seguintes versões das coisas:
 
     - Box2D-2.2.1
 
-Primeiramente, instale o MinGW-Get[1]_. Fique atento, e na tela de seleção de
+Primeiramente, instale o MinGW-Get [1]_. Fique atento, e na tela de seleção de
 componentes do wizard de instalação, certifique-se de marcar o compilador C++ e
 o "MSYS Basic System".
 
@@ -70,7 +70,7 @@ Msão grande e azul.
 
 Para facilitar nossa vida, vamos tentar realizar o maior número de
 procedimentos dentro do shell. Como vamos precisar baixar e extrair alguns
-arquivos, instale o msys-wget e o msys-unzip[2]_. No shell do MinGW, digite
+arquivos, instale o msys-wget e o msys-unzip [2]_. No shell do MinGW, digite
 
 ::
     
@@ -115,14 +115,14 @@ Mas há quem diga que há maneiras alternativas de instalá-lo...
     make && make install
 
 
-Em seguida, baixe o lunar-lander-ex [3]_[4]_.
+Em seguida, baixe o lunar-lander-ex [3]_ [4]_.
 
 ::
     
     cd ~
-    wget https://github.com/ravishi/lunar-lander-ex/zipball/master -O lunar-lander-ex.zip #[3]_
+    wget https://github.com/ravishi/lunar-lander-ex/zipball/master -O lunar-lander-ex.zip # [3]_
     unzip lunar-lander-ex.zip
-    cd ravishi-lunar-lander-ex-82af820 #[4]_
+    cd ravishi-lunar-lander-ex-82af820 # [4]_
 
 
 Dentro da pasta do lunar-lander-ex, baixe e compile o Box2D.
@@ -174,13 +174,10 @@ nos diretórios MinGW/bin ou MinGW/msys/1.0/local/bin.
 
 
 .. [1] http://sourceforge.net/projects/mingw/files/Installer/mingw-get-inst/
-
 .. [2] Este passo é opcional. Se você souber do que se trata esse lance de wget
-e unzip, provavelmente perceberá que pode baixar os pacotes, extraí-los e
-movê-los para o lugar certo sem essa dupla de programas.
-
+    e unzip, provavelmente perceberá que pode baixar os pacotes, extraí-los e
+    movê-los para o lugar certo sem essa dupla de programas.
 .. [3] Atenção! Neste ponto, o wget encontrou problemas com o certificado do
-github. Se isso acontecer, basta adicionar a flag --no-check-certificates ao
-comando executado que tudo dará certo.
-
+    github. Se isso acontecer, basta adicionar a flag --no-check-certificates ao
+    comando executado que tudo dará certo.
 .. [4] O hash no final do nome da pasta descomprimida poderá variar. Fique atento.
