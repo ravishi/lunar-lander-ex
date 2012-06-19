@@ -583,7 +583,7 @@ void AtualizarMundo(int value)
 
     // registrar esse mesmo callback novamente. ele deverá ser chamado
     // repetidamente.
-    //glutTimerFunc(acumuladorTemporal.alvo(), AtualizarMundo, value+1);
+    glutTimerFunc(acumuladorTemporal.alvo(), AtualizarMundo, value+1);
 }
 
 void InicializaFisica()
